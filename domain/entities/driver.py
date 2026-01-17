@@ -3,8 +3,9 @@ from datetime import datetime
 
 
 @dataclass
-class User:
-    """Сущность Пользователь - пассажир"""
+class Driver:
+    """Сущность Водитель"""
     id: str
     username: str
+    car_info: str
     register_date: datetime
