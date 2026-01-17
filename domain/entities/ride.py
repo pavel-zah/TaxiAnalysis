@@ -13,7 +13,6 @@ class Ride:
     destination: str
     started_at: datetime
     ended_at: datetime | None # равно None, если поездка не была совершена или еще в процессе
-    finished: bool
     ride_time: int
     price: Decimal = Decimal("0.00")
     tip: Decimal = Decimal("0.00")
