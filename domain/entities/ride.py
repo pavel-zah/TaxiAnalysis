@@ -21,8 +21,8 @@ class Ride:
 
     @property
     def ride_time(self) -> int:
-        """Время поездки в минутах. Равняется 0 если поезда не была совершена"""
-        if self.ended_at == None and self.finished == True: return 0
+        """Время поездки в минутах. Равняется 0 если поезда не была совершена или еще в процессе"""
+        if (self.ended_at == None) or (self.finished == True): return 0
 
         seconds = (self.ended_at - self.started_at).total_seconds()
         minutes = int(seconds // 60)
