@@ -7,5 +7,5 @@ class Driver:
     """Сущность Водитель"""
     id: str
     username: str
-    car_info: str
+    license_plate: str
     register_date: datetime
