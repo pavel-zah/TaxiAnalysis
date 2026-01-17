@@ -57,7 +57,6 @@ class FakeDataGenerator(DataGenerator):
             destination = destination,
             started_at = started_at,
             ended_at = ended_at,
-            ride_time =ride_time,
             price = price,
             tip = tip
         )
