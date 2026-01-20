@@ -5,7 +5,7 @@ from domain.entities.driver import Driver
 from datetime import datetime, timedelta
 import random
 from faker import Faker
-from decimal import Decimal, getcontext
+from decimal import Decimal, getcontext, ROUND_HALF_UP
 
 getcontext().prec = 2
 
@@ -26,7 +26,7 @@ def gen_ride_end_time(ride_start: datetime, duration_minutes) -> datetime:
 class FakeDataGenerator(DataGenerator):
     """Класс для создания фейковых данных"""
 
-    def __init__(self, model_name="qwen/qwen3-vl-4b"):
+    def __init__(self):
         self.fake = Faker("ru_RU")
 
     def generate_ride(self, user_id, driver_id) -> Ride:
@@ -43,8 +43,9 @@ class FakeDataGenerator(DataGenerator):
         ended_at = None if random.randint(1, 50) == 25 else gen_ride_end_time(started_at, ride_time)
 
         # цена = стоимость_подачи + (время_мин × тариф_за_мин)
-        price = Decimal(str(100 + ride_time * (random.random() + 0.5)))
-
+        price = Decimal(100 + ride_time * (random.random() + 0.5)).quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP
+        )
         #с шансом 15% пользователь оставит чаевые от 10 до 200 руб
         tip = Decimal("0.00") if random.randint(1, 100) > 15 else Decimal(str(random.randint(10, 200)) + ".00")
 
