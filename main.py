@@ -6,7 +6,7 @@ from time import sleep
 def main():
     db_writer = DBWriter(
         host="localhost",
-        port=5432,
+        port=5433,
         database="taxi"
     )
 
@@ -14,7 +14,7 @@ def main():
 
         data_generator = FakeDataGenerator()
 
-        for _ in range(100):
+        while True:
             # генерация и запись пользователей в бд
             users = [data_generator.generate_user() for _ in range(random.randint(3, 10))]
 

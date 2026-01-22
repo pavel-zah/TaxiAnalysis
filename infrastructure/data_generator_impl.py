@@ -9,12 +9,117 @@ from decimal import Decimal, getcontext, ROUND_HALF_UP
 
 getcontext().prec = 2
 
+def gen_date_skewed(min_year=2020, max_year=datetime.now().year):
+    start = datetime(min_year, 1, 1)
+    end = datetime(max_year, 12, 31, 23, 59, 59)
+
+    r = random.random() ** 0.25  # сильный перекос к концу
+    return start + (end - start) * r
+
+
+def gen_hour_realistic(dt: datetime):
+    weekday = dt.weekday()  # 0=пн ... 6=вс
+    is_weekend = weekday >= 5
+    is_friday = weekday == 4
+
+    intervals = [
+        ((0, 5), 0.03),    # ночь
+        ((6, 7), 0.07),    # раннее утро
+        ((8, 10), 0.28),   # утренний пик
+        ((11, 16), 0.20),  # дневное время
+        ((17, 19), 0.30),  # вечерний пик
+        ((20, 23), 0.12),  # поздний вечер
+    ]
+
+    # выходные — меньше утром, больше вечером
+    if is_weekend:
+        intervals = [
+            ((0, 6), 0.05),
+            ((7, 10), 0.10),
+            ((11, 16), 0.25),
+            ((17, 22), 0.45),
+            ((23, 23), 0.15),
+        ]
+
+    # пятничный вечер — отдельный буст
+    if is_friday:
+        intervals.append(((20, 22), 0.20))
+
+    ranges, weights = zip(*intervals)
+    chosen = random.choices(ranges, weights=weights)[0]
+
+    return random.randint(chosen[0], chosen[1])
+
+
 def gen_datetime(min_year=2020, max_year=datetime.now().year) -> datetime:
-    """ генерирует datetime в формате yyyy-mm-dd hh:mm:ss.000000 """
-    start = datetime(min_year, 1, 1, 00, 00, 00)
-    years = max_year - min_year + 1
-    end = start + timedelta(days=365 * years)
-    return start + (end - start) * random.random()
+    dt = gen_date_skewed(min_year, max_year)
+
+    hour = gen_hour_realistic(dt)
+    minute = random.randint(0, 59)
+    second = random.randint(0, 59)
+
+    return dt.replace(hour=hour, minute=minute, second=second)
+
+def gen_ride_time():
+    # пик ~15–25 минут, длинные поездки редкие
+    base = int(random.lognormvariate(2.7, 0.6))
+    return max(5, min(base, 120))
+
+def gen_end_time(started_at, ride_time):
+    hour = started_at.hour
+
+    cancel_prob = 0.01
+    if hour < 6:
+        cancel_prob = 0.04
+    elif hour in (8, 9, 18, 19):
+        cancel_prob = 0.02
+
+    if random.random() < cancel_prob:
+        return None
+
+    return started_at + timedelta(minutes=ride_time)
+
+def gen_price(ride_time):
+    base_fee = random.choice([99, 129, 149])
+    per_minute = random.uniform(12, 20)
+
+    # длинные поездки — дешевле за минуту
+    if ride_time > 40:
+        per_minute *= 0.85
+
+    price = base_fee + ride_time * per_minute
+    return Decimal(price).quantize(Decimal("1.00"))
+
+
+def gen_tip(started_at, price):
+    weekday = started_at.weekday()
+    is_weekend = weekday >= 5
+    hour = started_at.hour
+
+    prob = 0.12
+    if is_weekend:
+        prob += 0.08
+    if hour >= 18:
+        prob += 0.05
+
+    if random.random() > prob:
+        return Decimal("0.00")
+
+    tips = [50, 100, 150, 200, 300]
+    tip = random.choice(tips)
+
+    # иногда процент от цены
+    if random.random() < 0.3:
+        tip = int(price * random.choice([0.05, 0.1]))
+
+    return Decimal(tip).quantize(Decimal("1.00"))
+
+def gen_addresses(fake):
+    if random.random() < 0.6:
+        street = fake.street_name()
+        return street + " 10", street + " 55"
+    return fake.street_address(), fake.street_address()
+
 
 
 def gen_ride_end_time(ride_start: datetime, duration_minutes) -> datetime:
@@ -30,39 +135,28 @@ class FakeDataGenerator(DataGenerator):
         self.fake = Faker("ru_RU")
 
     def generate_ride(self, user_id, driver_id) -> Ride:
-        """Сгенерировать объект поездки"""
-        ride_id = str(random.randint(1_000_000_000_000_000, 10_000_000_000_000_000 - 1))
-        starting_point = self.fake.street_address()
-        destination = self.fake.street_address()
+        ride_id = str(random.randint(10 ** 15, 10 ** 16 - 1))
+
+        starting_point, destination = gen_addresses(self.fake)
+
         started_at = gen_datetime()
+        ride_time = gen_ride_time()
+        ended_at = gen_end_time(started_at, ride_time)
 
-        # случайное время поездки (от 5 до 120 минут)
-        ride_time = random.randint(5, 120)
+        price = gen_price(ride_time)
+        tip = gen_tip(started_at, price)
 
-        #с шансом 2% поездка будет иметь статус отменена или еще в процессе
-        ended_at = None if random.randint(1, 50) == 25 else gen_ride_end_time(started_at, ride_time)
-
-        # цена = стоимость_подачи + (время_мин × тариф_за_мин)
-        price = Decimal(100 + ride_time * (random.random() + 0.5)).quantize(
-            Decimal('0.01'), rounding=ROUND_HALF_UP
+        return Ride(
+            id=ride_id,
+            driver_id=driver_id,
+            rider_id=user_id,
+            starting_point=starting_point,
+            destination=destination,
+            started_at=started_at,
+            ended_at=ended_at,
+            price=price,
+            tip=tip
         )
-        #с шансом 15% пользователь оставит чаевые от 10 до 200 руб
-        tip = Decimal("0.00") if random.randint(1, 100) > 15 else Decimal(str(random.randint(10, 200)) + ".00")
-
-
-        fake_ride = Ride(
-            id = ride_id,
-            driver_id = driver_id,
-            rider_id = user_id,
-            starting_point = starting_point,
-            destination = destination,
-            started_at = started_at,
-            ended_at = ended_at,
-            price = price,
-            tip = tip
-        )
-
-        return fake_ride
 
     def generate_user(self) -> User:
         """Сгенерировать объект пользователя"""

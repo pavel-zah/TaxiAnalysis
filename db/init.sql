@@ -1,4 +1,6 @@
-GRANT ALL PRIVILEGES ON DATABASE taxi TO test_user;
+CREATE DATABASE taxi;
+
+\c taxi
 
 CREATE TABLE users (
     id VARCHAR(255) PRIMARY KEY,
