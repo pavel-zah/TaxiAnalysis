@@ -1,6 +1,14 @@
 version: "3.9"
 
 services:
+  app:
+    build: ./app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://user:password123@postgres:5432/taxi"
+    restart: "no"
   redash:
     image: redash/redash:latest
     environment:
@@ -53,7 +61,7 @@ services:
       - ./db:/docker-entrypoint-initdb.d
       - ./pg_data:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d redash"]
       interval: 5s
