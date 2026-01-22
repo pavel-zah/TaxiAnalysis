@@ -11,20 +11,16 @@ class DBWriter:
     """Класс для записи данных об объектах в Postgres"""
     def __init__(self, host, port, database):
         load_dotenv()
-        db_user = os.getenv('POSTGRES_USER')
-        db_password = os.getenv('POSTGRES_PASSWORD')
+        db_user = 'user'
+        db_password = 'password123'
 
-        self.conn = psycopg2.connect(
-            host=host,
-            port=port,
-            database=database,
-            user=db_user,
-            password=db_password
-        )
+        print(f"DB User: '{db_user}'")
+        print(f"DB Password: '{db_password}'")
+        self.conn = psycopg2.connect(host="localhost", database="taxi", user="test_user", password="password123", port=5432)
+
 
     def create_user_batch(self, users: List[User]):
         """Метод для записи данных об пользователях в Postgres"""
-
         with self.conn.cursor() as cursor:
             for user in users:
                 cursor.execute(
