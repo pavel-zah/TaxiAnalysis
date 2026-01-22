@@ -5,7 +5,7 @@ from domain.entities.driver import Driver
 from datetime import datetime, timedelta
 import random
 from faker import Faker
-from decimal import Decimal, getcontext
+from decimal import Decimal, getcontext, ROUND_HALF_UP
 
 getcontext().prec = 2
 
@@ -131,7 +131,7 @@ def gen_ride_end_time(ride_start: datetime, duration_minutes) -> datetime:
 class FakeDataGenerator(DataGenerator):
     """Класс для создания фейковых данных"""
 
-    def __init__(self, model_name="qwen/qwen3-vl-4b"):
+    def __init__(self):
         self.fake = Faker("ru_RU")
 
     def generate_ride(self, user_id, driver_id) -> Ride:

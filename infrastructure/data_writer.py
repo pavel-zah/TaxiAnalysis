@@ -24,7 +24,6 @@ class DBWriter:
 
     def create_user_batch(self, users: List[User]):
         """Метод для записи данных об пользователях в Postgres"""
-
         with self.conn.cursor() as cursor:
             for user in users:
                 cursor.execute(
