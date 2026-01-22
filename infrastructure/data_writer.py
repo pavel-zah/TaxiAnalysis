@@ -10,16 +10,16 @@ from domain.entities.ride import Ride
 class DBWriter:
     """Класс для записи данных об объектах в Postgres"""
     def __init__(self, host, port, database):
-        load_dotenv()
-        db_user = os.getenv('POSTGRES_USER')
-        db_password = os.getenv('POSTGRES_PASSWORD')
+        # load_dotenv()
+        # db_user = os.getenv('POSTGRES_USER')
+        # db_password = os.getenv('POSTGRES_PASSWORD')
 
         self.conn = psycopg2.connect(
             host=host,
             port=port,
             database=database,
-            user=db_user,
-            password=db_password
+            user='user',
+            password='password123'
         )
 
     def create_user_batch(self, users: List[User]):
