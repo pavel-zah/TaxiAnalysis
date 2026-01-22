@@ -1,0 +1,74 @@
+version: "3.9"
+
+services:
+  app:
+    build: ./app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://user:password123@postgres:5432/taxi"
+    restart: "no"
+  redash:
+    image: redash/redash:latest
+    environment:
+      REDASH_DATABASE_URL: "postgresql://user:password123@postgres:5432/redash"
+      REDASH_REDIS_URL: "redis://redis:6379/0"
+      REDASH_SECRET_KEY: "secret-key-123"
+    ports:
+      - "5000:5000"
+    depends_on:
+      redash-create-db:
+        condition: service_completed_successfully
+    command: server
+    restart: always
+
+  redash-create-db:
+    image: redash/redash:latest
+    environment:
+      REDASH_DATABASE_URL: "postgresql://user:password123@postgres:5432/redash"
+      REDASH_REDIS_URL: "redis://redis:6379/0"
+      REDASH_SECRET_KEY: "secret-key-123"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: create_db
+    restart: "no"
+
+  redash-worker:
+    image: redash/redash:latest
+    environment:
+      REDASH_DATABASE_URL: "postgresql://user:password123@postgres:5432/redash"
+      REDASH_REDIS_URL: "redis://redis:6379/0"
+      REDASH_SECRET_KEY: "secret-key-123"
+      QUEUES: "queries,scheduled_queries,celery"
+      WORKERS_COUNT: 2
+    depends_on:
+      redash-create-db:
+        condition: service_completed_successfully
+    command: worker
+    restart: always
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: redash
+    volumes:
+      - ./db:/docker-entrypoint-initdb.d
+      - ./pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d redash"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
