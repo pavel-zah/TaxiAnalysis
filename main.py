@@ -14,7 +14,7 @@ def main():
 
         data_generator = FakeDataGenerator()
 
-        for _ in range(100):
+        while True:
             # генерация и запись пользователей в бд
             users = [data_generator.generate_user() for _ in range(random.randint(3, 10))]
 
